@@ -1,5 +1,5 @@
- # 📚 API Stress Test Tool - Guía Completa  
- **Herramienta profesional para pruebas de estrés en APIs REST**  
+ # 📚 API Stress Test Tool v1.00 - by César Rodríguez  
+ **Herramienta para pruebas de estrés en APIs REST**  
 
  <div align="center">
    <img src="https://img.shields.io/badge/Python-3.8%2B-blue?logo=python" alt="Python 3.8+">
