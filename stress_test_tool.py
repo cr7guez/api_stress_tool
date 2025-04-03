@@ -1,0 +1,381 @@
+import customtkinter as ctk
+from tkinter import messagebox
+import threading
+import time
+import random
+import requests
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import statistics
+from PIL import Image
+import queue
+
+# Configuration
+ctk.set_appearance_mode("System")  # Modes: "System" (default), "Dark", "Light"
+ctk.set_default_color_theme("blue")  # Themes: "blue" (default), "green", "dark-blue"
+
+# Global variables
+response_times = []
+status_codes = {}
+errors = []
+test_running = False
+log_queue = queue.Queue()
+endpoints_to_test = []
+available_endpoints = [
+    "/Area/GetAreas", "/Auth/Logout", "/Auth/Logout2", "/AvcitCommand",
+    "/AvcitDevice", "/AvcitSource", "/AvDevice/GetAvDevices",
+    "/AvDeviceType/GetAvDeviceTypes", "/Cam/GetLast10Cams",
+    "/Company/GetCompanies", "/Component/GetComponents",
+    "/Component/UpdateUserActiveDirectory", "/Component/ImgProbe",
+    "/Component/ScanDevices", "/Component/GetNumCallforsuppSevenDays",
+    "/Component/GetAllDevices", "/Component/GetAddressIP",
+    "/ConsoleDevice/GetConsoleDevices", "/ConsoleDevice/GetRegisterAreaInflunceByUserId",
+    "/ConsoleDevice/GetConsoleStatusWorkplace", "/Department/GetDeparments",
+    "/Indicators/GetCallForSupportTypeIndicators", "/Indicators/GetLast7DaysCallForSupport",
+    "/Indicators/GetLoggedUsersPercentage", "/InfluenceZone/GetInfluenceZones",
+    "/Notification/GetCallforSuppNotificationRecived", "/Notification/GetCallforSuppNotificationSended",
+    "/Position/GetPositions", "/Room/GetRooms", "/RoomOverview/GetRoomOverview",
+    "/RoomOverview/GetRoomOverviewByUserId", "/RoomOverview/GetRegistersInWorkplace",
+    "/VuwallDestination/GetDestinations", "/VuwallJoin/GetJoins", "/VuwallScenario/GetScenarios",
+    "/VuwallScenario/GetScenarioSources", "/VuwallSource/GetSources", "/Workplace/GetWorkplaces",
+    "/Workplace/GetWorkplaceList"
+]
+
+class APITestApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("API Stress Test Tool V1.0 by cr7guez")
+        self.root.geometry("1200x800")
+        self.root.minsize(1000, 700)
+        
+        # Configure grid layout (4x4)
+        self.root.grid_columnconfigure(1, weight=1)
+        self.root.grid_columnconfigure((2, 3), weight=0)
+        self.root.grid_rowconfigure((0, 1, 2), weight=1)
+        
+        # Create sidebar frame with widgets
+        self.sidebar_frame = ctk.CTkFrame(self.root, width=140, corner_radius=0)
+        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
+        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        
+        # Logo label
+        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="API Stress Test", 
+                                      font=ctk.CTkFont(size=20, weight="bold"))
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        
+        # Test parameters frame
+        self.params_frame = ctk.CTkFrame(self.sidebar_frame)
+        self.params_frame.grid(row=1, column=0, padx=20, pady=(10, 0), sticky="nsew")
+        
+        # Number of users
+        self.num_users_label = ctk.CTkLabel(self.params_frame, text="Number of Users:")
+        self.num_users_label.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="w")
+        self.num_users_entry = ctk.CTkEntry(self.params_frame)
+        self.num_users_entry.insert(0, "176")
+        self.num_users_entry.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
+        
+        # Delay range
+        self.delay_label = ctk.CTkLabel(self.params_frame, text="Delay Range (s):")
+        self.delay_label.grid(row=2, column=0, padx=5, pady=(5, 0), sticky="w")
+        
+        self.delay_frame = ctk.CTkFrame(self.params_frame, fg_color="transparent")
+        self.delay_frame.grid(row=3, column=0, padx=0, pady=(0, 5), sticky="ew")
+        self.delay_frame.grid_columnconfigure((0, 1), weight=1)
+        
+        self.delay_min_entry = ctk.CTkEntry(self.delay_frame, width=60)
+        self.delay_min_entry.insert(0, "0.1")
+        self.delay_min_entry.grid(row=0, column=0, padx=(0, 5), sticky="w")
+        
+        self.delay_max_entry = ctk.CTkEntry(self.delay_frame, width=60)
+        self.delay_max_entry.insert(0, "10")
+        self.delay_max_entry.grid(row=0, column=1, padx=(5, 0), sticky="e")
+        
+        # Log interval
+        self.log_interval_label = ctk.CTkLabel(self.params_frame, text="Log Interval (s):")
+        self.log_interval_label.grid(row=4, column=0, padx=5, pady=(5, 0), sticky="w")
+        self.log_interval_entry = ctk.CTkEntry(self.params_frame)
+        self.log_interval_entry.insert(0, "30")
+        self.log_interval_entry.grid(row=5, column=0, padx=5, pady=(0, 10), sticky="ew")
+        
+        # Server URL
+        self.server_url_label = ctk.CTkLabel(self.params_frame, text="Server URL:")
+        self.server_url_label.grid(row=6, column=0, padx=5, pady=(5, 0), sticky="w")
+        self.server_url_entry = ctk.CTkEntry(self.params_frame, placeholder_text="http://192.168.1.52:5000")
+        self.server_url_entry.grid(row=7, column=0, padx=5, pady=(0, 10), sticky="ew")
+        
+        # Buttons
+        self.start_button = ctk.CTkButton(self.sidebar_frame, text="Start Test", command=self.start_test)
+        self.start_button.grid(row=2, column=0, padx=20, pady=10)
+        
+        self.stop_button = ctk.CTkButton(self.sidebar_frame, text="Stop Test", 
+                                       command=self.stop_test, state="disabled")
+        self.stop_button.grid(row=3, column=0, padx=20, pady=10)
+        
+        # Endpoint selection frame
+        self.endpoints_frame = ctk.CTkFrame(self.root)
+        self.endpoints_frame.grid(row=0, column=1, padx=(10, 0), pady=(10, 0), sticky="nsew")
+        self.endpoints_frame.grid_columnconfigure(0, weight=1)
+        self.endpoints_frame.grid_rowconfigure(1, weight=1)
+        
+        self.endpoints_label = ctk.CTkLabel(self.endpoints_frame, text="Select Endpoints to Test", 
+                                          font=ctk.CTkFont(weight="bold"))
+        self.endpoints_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        
+        # Scrollable frame for checkboxes
+        self.checkbox_scrollframe = ctk.CTkScrollableFrame(self.endpoints_frame)
+        self.checkbox_scrollframe.grid(row=1, column=0, padx=5, pady=(0, 10), sticky="nsew")
+        
+        # Create checkboxes for each endpoint
+        self.endpoint_checkboxes = []
+        for i, endpoint in enumerate(available_endpoints):
+            checkbox = ctk.CTkCheckBox(self.checkbox_scrollframe, text=endpoint)
+            checkbox.grid(row=i, column=0, padx=5, pady=2, sticky="w")
+            self.endpoint_checkboxes.append(checkbox)
+        
+        # Select all/none buttons
+        self.select_buttons_frame = ctk.CTkFrame(self.endpoints_frame, fg_color="transparent")
+        self.select_buttons_frame.grid(row=2, column=0, padx=5, pady=(0, 10), sticky="ew")
+        
+        self.select_all_button = ctk.CTkButton(self.select_buttons_frame, text="Select All", 
+                                             width=80, command=self.select_all_endpoints)
+        self.select_all_button.grid(row=0, column=0, padx=(0, 5))
+        
+        self.deselect_all_button = ctk.CTkButton(self.select_buttons_frame, text="Deselect All", 
+                                                width=80, command=self.deselect_all_endpoints)
+        self.deselect_all_button.grid(row=0, column=1, padx=(5, 0))
+        
+        # Log frame
+        self.log_frame = ctk.CTkFrame(self.root)
+        self.log_frame.grid(row=1, column=1, padx=(10, 0), pady=(10, 0), sticky="nsew")
+        self.log_frame.grid_columnconfigure(0, weight=1)
+        self.log_frame.grid_rowconfigure(0, weight=1)
+        
+        self.log_label = ctk.CTkLabel(self.log_frame, text="Test Log", 
+                                    font=ctk.CTkFont(weight="bold"))
+        self.log_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        
+        self.log_text = ctk.CTkTextbox(self.log_frame, wrap="word")
+        self.log_text.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
+        self.log_text.configure(state="disabled")
+        
+        # Graph frame
+        self.graph_frame = ctk.CTkFrame(self.root)
+        self.graph_frame.grid(row=0, column=2, rowspan=2, padx=(10, 10), pady=(10, 0), sticky="nsew")
+        self.graph_frame.grid_columnconfigure(0, weight=1)
+        self.graph_frame.grid_rowconfigure(1, weight=1)
+        
+        self.graph_label = ctk.CTkLabel(self.graph_frame, text="Response Times", 
+                                       font=ctk.CTkFont(weight="bold"))
+        self.graph_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        
+        # Create matplotlib figure
+        self.fig, self.ax = plt.subplots(figsize=(5, 4), dpi=100)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.graph_frame)
+        self.canvas.get_tk_widget().grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
+        
+        # Status bar
+        self.status_bar = ctk.CTkLabel(self.root, text="Ready", anchor="w", 
+                                      font=ctk.CTkFont(size=10))
+        self.status_bar.grid(row=3, column=1, columnspan=2, padx=10, pady=(0, 10), sticky="ew")
+        
+        # Start periodic updates
+        self.update_logs()
+        self.update_graph_periodically()
+    
+    def select_all_endpoints(self):
+        for checkbox in self.endpoint_checkboxes:
+            checkbox.select()
+    
+    def deselect_all_endpoints(self):
+        for checkbox in self.endpoint_checkboxes:
+            checkbox.deselect()
+    
+    def get_selected_endpoints(self):
+        selected = []
+        for i, checkbox in enumerate(self.endpoint_checkboxes):
+            if checkbox.get() == 1:
+                selected.append(available_endpoints[i])
+        return selected
+    
+    def log_message(self, message):
+        log_queue.put(message)
+    
+    def update_logs(self):
+        try:
+            while True:
+                message = log_queue.get_nowait()
+                self.log_text.configure(state="normal")
+                self.log_text.insert("end", message + "\n")
+                self.log_text.see("end")
+                self.log_text.configure(state="disabled")
+        except queue.Empty:
+            pass
+        self.root.after(100, self.update_logs)
+    
+    def send_request(self, session, endpoint):
+        """Send a GET request and record metrics."""
+        base_url = self.server_url_entry.get().strip()
+        if not base_url:
+            base_url = "http://192.168.1.52:5000"
+        
+        url = f"{base_url}{endpoint}"
+        try:
+            start_time = time.time()
+            response = session.get(url)
+            elapsed_time = time.time() - start_time
+            response_times.append(elapsed_time)
+            status_codes[response.status_code] = status_codes.get(response.status_code, 0) + 1
+            self.log_message(f"Request to {endpoint} -> {response.status_code} | Time: {elapsed_time:.4f} s")
+            return response.status_code, elapsed_time
+        except requests.RequestException as e:
+            errors.append(str(e))
+            self.log_message(f"Error requesting {endpoint}: {str(e)}")
+            return "Error", None
+    
+    def user_simulation(self, user_id):
+        """Simulate a user generating requests."""
+        session = requests.Session()
+        endpoints = self.get_selected_endpoints()
+        if not endpoints:
+            self.log_message("No endpoints selected for testing!")
+            return
+            
+        while test_running:
+            endpoint = random.choice(endpoints)
+            self.send_request(session, endpoint)
+            time.sleep(random.uniform(float(self.delay_min_entry.get()), float(self.delay_max_entry.get())))
+    
+    def start_test(self):
+        global test_running, response_times, status_codes, errors
+        
+        # Reset metrics
+        response_times = []
+        status_codes = {}
+        errors = []
+        
+        # Get selected endpoints
+        endpoints_to_test = self.get_selected_endpoints()
+        if not endpoints_to_test:
+            messagebox.showwarning("Warning", "Please select at least one endpoint to test")
+            return
+        
+        # Validate parameters
+        try:
+            num_users = int(self.num_users_entry.get())
+            delay_min = float(self.delay_min_entry.get())
+            delay_max = float(self.delay_max_entry.get())
+            log_interval = int(self.log_interval_entry.get())
+            
+            if delay_min < 0 or delay_max < 0:
+                raise ValueError("Delay values must be positive")
+            if delay_min > delay_max:
+                raise ValueError("Minimum delay must be less than maximum delay")
+        except ValueError as e:
+            messagebox.showerror("Error", f"Invalid parameter: {str(e)}")
+            return
+        
+        # Update UI
+        test_running = True
+        self.start_button.configure(state="disabled")
+        self.stop_button.configure(state="normal")
+        self.num_users_entry.configure(state="disabled")
+        self.delay_min_entry.configure(state="disabled")
+        self.delay_max_entry.configure(state="disabled")
+        self.log_interval_entry.configure(state="disabled")
+        self.server_url_entry.configure(state="disabled")
+        
+        # Disable endpoint selection during test
+        for checkbox in self.endpoint_checkboxes:
+            checkbox.configure(state="disabled")
+        
+        self.select_all_button.configure(state="disabled")
+        self.deselect_all_button.configure(state="disabled")
+        
+        self.log_message("\n=== Starting stress test ===")
+        self.log_message(f"Users: {num_users} | Endpoints: {len(endpoints_to_test)}")
+        self.log_message(f"Delay range: {delay_min}-{delay_max}s | Log interval: {log_interval}s")
+        
+        # Start user threads
+        threads = []
+        for user_id in range(num_users):
+            thread = threading.Thread(target=self.user_simulation, args=(user_id,))
+            threads.append(thread)
+            thread.daemon = True
+            thread.start()
+        
+        # Start log thread
+        log_thread = threading.Thread(target=self.log_status, args=(log_interval,))
+        log_thread.daemon = True
+        log_thread.start()
+        
+        self.status_bar.configure(text="Test running...")
+    
+    def stop_test(self):
+        global test_running
+        
+        test_running = False
+        self.start_button.configure(state="normal")
+        self.stop_button.configure(state="disabled")
+        self.num_users_entry.configure(state="normal")
+        self.delay_min_entry.configure(state="normal")
+        self.delay_max_entry.configure(state="normal")
+        self.log_interval_entry.configure(state="normal")
+        self.server_url_entry.configure(state="normal")
+        
+        # Re-enable endpoint selection
+        for checkbox in self.endpoint_checkboxes:
+            checkbox.configure(state="normal")
+        
+        self.select_all_button.configure(state="normal")
+        self.deselect_all_button.configure(state="normal")
+        
+        self.log_message("\n=== Test stopped ===")
+        self.status_bar.configure(text="Test stopped")
+    
+    def log_status(self, interval):
+        while test_running:
+            time.sleep(interval)
+            
+            if response_times:
+                avg_time = statistics.mean(response_times)
+                min_time = min(response_times)
+                max_time = max(response_times)
+                std_dev = statistics.stdev(response_times) if len(response_times) > 1 else 0
+                
+                status_message = (
+                    f"\n=== Status Update ===\n"
+                    f"Requests: {len(response_times)}\n"
+                    f"Avg Time: {avg_time:.4f} s\n"
+                    f"Min Time: {min_time:.4f} s\n"
+                    f"Max Time: {max_time:.4f} s\n"
+                    f"Std Dev: {std_dev:.4f} s\n"
+                    f"Status Codes: {status_codes}\n"
+                    f"Errors: {len(errors)}"
+                )
+                self.log_message(status_message)
+    
+    def update_graph(self):
+        if response_times:
+            self.ax.clear()
+            self.ax.plot(range(len(response_times)), response_times, label="Response Times", color='#3a7ebf')
+            self.ax.set_title("Response Times Over Time", pad=10)
+            self.ax.set_xlabel("Request Count")
+            self.ax.set_ylabel("Response Time (s)")
+            self.ax.grid(True, linestyle='--', alpha=0.7)
+            self.ax.legend(loc="upper right")
+            self.canvas.draw()
+    
+    def update_graph_periodically(self):
+        self.update_graph()
+        self.root.after(1000, self.update_graph_periodically)
+    
+    def on_closing(self):
+        global test_running
+        test_running = False
+        self.root.destroy()
+
+if __name__ == "__main__":
+    root = ctk.CTk()
+    app = APITestApp(root)
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
+    root.mainloop()
