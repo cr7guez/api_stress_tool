@@ -44,7 +44,7 @@ available_endpoints = [
 class APITestApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("API Stress Test Tool V1.0 by cr7guez")
+        self.root.title("Modern API Stress Test Tool")
         self.root.geometry("1200x800")
         self.root.minsize(1000, 700)
         
