@@ -1,26 +1,23 @@
 @echo off
-:: Versión para estructura con src/
-setlocal
+setlocal enabledelayedexpansion
 
-:: Verifica que existe el archivo Python
+:: Configuración portable
+set PYTHON=python
+where !PYTHON! >nul 2>&1 || set PYTHON=python.exe
+
+:: Verificación de archivos
 if not exist "stress_test_tool.py" (
     echo.
-    echo ERROR: Archivo no encontrado en:
-    echo %~dp0stress_test_tool.py
+    echo ERROR: El sistema no puede encontrar el archivo "stress_test_tool.py"
     echo.
-    echo Descarga el repositorio completo desde GitHub
+    echo SOLUCIÓN:
+    echo 1. Descarga todos los archivos del repositorio
+    echo 2. Ejecuta este bat desde la carpeta principal
+    echo.
     pause
     exit /b 1
 )
 
-:: Ejecuta el script
-python "stress_test_tool.py"
-
-:: Manejo de errores
-if %errorlevel% neq 0 (
-    echo.
-    echo ERROR: Código de salida %errorlevel%
-    echo Ejecuta desde CMD para ver detalles
-    pause
-)
-endlocal
+:: Ejecución limpia (sin terminal visible)
+start "" /B cmd /c "!PYTHON! stress_test_tool.py & exit"
+exit

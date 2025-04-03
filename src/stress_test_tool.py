@@ -7,12 +7,13 @@ import requests
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import statistics
-from PIL import Image
 import queue
+import json
+from urllib.parse import urljoin
 
 # Configuration
-ctk.set_appearance_mode("System")  # Modes: "System" (default), "Dark", "Light"
-ctk.set_default_color_theme("blue")  # Themes: "blue" (default), "green", "dark-blue"
+ctk.set_appearance_mode("System")
+ctk.set_default_color_theme("blue")
 
 # Global variables
 response_times = []
@@ -21,25 +22,7 @@ errors = []
 test_running = False
 log_queue = queue.Queue()
 endpoints_to_test = []
-available_endpoints = [
-    "/Area/GetAreas", "/Auth/Logout", "/Auth/Logout2", "/AvcitCommand",
-    "/AvcitDevice", "/AvcitSource", "/AvDevice/GetAvDevices",
-    "/AvDeviceType/GetAvDeviceTypes", "/Cam/GetLast10Cams",
-    "/Company/GetCompanies", "/Component/GetComponents",
-    "/Component/UpdateUserActiveDirectory", "/Component/ImgProbe",
-    "/Component/ScanDevices", "/Component/GetNumCallforsuppSevenDays",
-    "/Component/GetAllDevices", "/Component/GetAddressIP",
-    "/ConsoleDevice/GetConsoleDevices", "/ConsoleDevice/GetRegisterAreaInflunceByUserId",
-    "/ConsoleDevice/GetConsoleStatusWorkplace", "/Department/GetDeparments",
-    "/Indicators/GetCallForSupportTypeIndicators", "/Indicators/GetLast7DaysCallForSupport",
-    "/Indicators/GetLoggedUsersPercentage", "/InfluenceZone/GetInfluenceZones",
-    "/Notification/GetCallforSuppNotificationRecived", "/Notification/GetCallforSuppNotificationSended",
-    "/Position/GetPositions", "/Room/GetRooms", "/RoomOverview/GetRoomOverview",
-    "/RoomOverview/GetRoomOverviewByUserId", "/RoomOverview/GetRegistersInWorkplace",
-    "/VuwallDestination/GetDestinations", "/VuwallJoin/GetJoins", "/VuwallScenario/GetScenarios",
-    "/VuwallScenario/GetScenarioSources", "/VuwallSource/GetSources", "/Workplace/GetWorkplaces",
-    "/Workplace/GetWorkplaceList"
-]
+available_endpoints = []  # Se llenará automáticamente
 
 class APITestApp:
     def __init__(self, root):
@@ -48,38 +31,60 @@ class APITestApp:
         self.root.geometry("1200x800")
         self.root.minsize(1000, 700)
         
-        # Configure grid layout (4x4)
+        # Configure grid layout
         self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_columnconfigure((2, 3), weight=0)
         self.root.grid_rowconfigure((0, 1, 2), weight=1)
         
-        # Create sidebar frame with widgets
+        # Create widgets
+        self.create_widgets()
+        
+        # Start periodic updates
+        self.update_logs()
+        self.update_graph_periodically()
+    
+    def create_widgets(self):
+        """Create all GUI widgets"""
+        # Sidebar frame
         self.sidebar_frame = ctk.CTkFrame(self.root, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        self.sidebar_frame.grid_rowconfigure(5, weight=1)
         
         # Logo label
         self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="API Stress Test", 
-                                      font=ctk.CTkFont(size=20, weight="bold"))
+                                     font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         
         # Test parameters frame
         self.params_frame = ctk.CTkFrame(self.sidebar_frame)
         self.params_frame.grid(row=1, column=0, padx=20, pady=(10, 0), sticky="nsew")
         
+        # Server URL
+        self.server_url_label = ctk.CTkLabel(self.params_frame, text="Server URL:")
+        self.server_url_label.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="w")
+        self.server_url_entry = ctk.CTkEntry(self.params_frame, placeholder_text="http://192.168.1.52:5000")
+        # Insertar valor predeterminado (visible y editable)
+        self.server_url_entry.insert(0, "http://192.168.1.52:5000") 
+        self.server_url_entry.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
+        
+        # Discover endpoints button
+        self.discover_btn = ctk.CTkButton(self.params_frame, text="Discover Endpoints",
+                                         command=self.discover_endpoints)
+        self.discover_btn.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        
         # Number of users
         self.num_users_label = ctk.CTkLabel(self.params_frame, text="Number of Users:")
-        self.num_users_label.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="w")
+        self.num_users_label.grid(row=3, column=0, padx=5, pady=(5, 0), sticky="w")
         self.num_users_entry = ctk.CTkEntry(self.params_frame)
-        self.num_users_entry.insert(0, "176")
-        self.num_users_entry.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
+        self.num_users_entry.insert(0, "10")
+        self.num_users_entry.grid(row=4, column=0, padx=5, pady=(0, 5), sticky="ew")
         
         # Delay range
         self.delay_label = ctk.CTkLabel(self.params_frame, text="Delay Range (s):")
-        self.delay_label.grid(row=2, column=0, padx=5, pady=(5, 0), sticky="w")
+        self.delay_label.grid(row=5, column=0, padx=5, pady=(5, 0), sticky="w")
         
         self.delay_frame = ctk.CTkFrame(self.params_frame, fg_color="transparent")
-        self.delay_frame.grid(row=3, column=0, padx=0, pady=(0, 5), sticky="ew")
+        self.delay_frame.grid(row=6, column=0, padx=0, pady=(0, 5), sticky="ew")
         self.delay_frame.grid_columnconfigure((0, 1), weight=1)
         
         self.delay_min_entry = ctk.CTkEntry(self.delay_frame, width=60)
@@ -87,29 +92,23 @@ class APITestApp:
         self.delay_min_entry.grid(row=0, column=0, padx=(0, 5), sticky="w")
         
         self.delay_max_entry = ctk.CTkEntry(self.delay_frame, width=60)
-        self.delay_max_entry.insert(0, "10")
+        self.delay_max_entry.insert(0, "1.0")
         self.delay_max_entry.grid(row=0, column=1, padx=(5, 0), sticky="e")
         
         # Log interval
         self.log_interval_label = ctk.CTkLabel(self.params_frame, text="Log Interval (s):")
-        self.log_interval_label.grid(row=4, column=0, padx=5, pady=(5, 0), sticky="w")
+        self.log_interval_label.grid(row=7, column=0, padx=5, pady=(5, 0), sticky="w")
         self.log_interval_entry = ctk.CTkEntry(self.params_frame)
-        self.log_interval_entry.insert(0, "30")
-        self.log_interval_entry.grid(row=5, column=0, padx=5, pady=(0, 10), sticky="ew")
-        
-        # Server URL
-        self.server_url_label = ctk.CTkLabel(self.params_frame, text="Server URL:")
-        self.server_url_label.grid(row=6, column=0, padx=5, pady=(5, 0), sticky="w")
-        self.server_url_entry = ctk.CTkEntry(self.params_frame, placeholder_text="http://192.168.1.52:5000")
-        self.server_url_entry.grid(row=7, column=0, padx=5, pady=(0, 10), sticky="ew")
+        self.log_interval_entry.insert(0, "10")
+        self.log_interval_entry.grid(row=8, column=0, padx=5, pady=(0, 10), sticky="ew")
         
         # Buttons
         self.start_button = ctk.CTkButton(self.sidebar_frame, text="Start Test", command=self.start_test)
-        self.start_button.grid(row=2, column=0, padx=20, pady=10)
+        self.start_button.grid(row=2, column=0, padx=20, pady=5)
         
         self.stop_button = ctk.CTkButton(self.sidebar_frame, text="Stop Test", 
                                        command=self.stop_test, state="disabled")
-        self.stop_button.grid(row=3, column=0, padx=20, pady=10)
+        self.stop_button.grid(row=3, column=0, padx=20, pady=5)
         
         # Endpoint selection frame
         self.endpoints_frame = ctk.CTkFrame(self.root)
@@ -125,12 +124,8 @@ class APITestApp:
         self.checkbox_scrollframe = ctk.CTkScrollableFrame(self.endpoints_frame)
         self.checkbox_scrollframe.grid(row=1, column=0, padx=5, pady=(0, 10), sticky="nsew")
         
-        # Create checkboxes for each endpoint
+        # Create empty checkboxes (will be populated when endpoints are discovered)
         self.endpoint_checkboxes = []
-        for i, endpoint in enumerate(available_endpoints):
-            checkbox = ctk.CTkCheckBox(self.checkbox_scrollframe, text=endpoint)
-            checkbox.grid(row=i, column=0, padx=5, pady=2, sticky="w")
-            self.endpoint_checkboxes.append(checkbox)
         
         # Select all/none buttons
         self.select_buttons_frame = ctk.CTkFrame(self.endpoints_frame, fg_color="transparent")
@@ -177,10 +172,85 @@ class APITestApp:
         self.status_bar = ctk.CTkLabel(self.root, text="Ready", anchor="w", 
                                       font=ctk.CTkFont(size=10))
         self.status_bar.grid(row=3, column=1, columnspan=2, padx=10, pady=(0, 10), sticky="ew")
+    
+    def discover_endpoints(self):
+        """Discover API endpoints automatically"""
+        base_url = self.server_url_entry.get().strip()
+        if not base_url:
+            messagebox.showwarning("Warning", "Please enter a valid Server URL")
+            return
         
-        # Start periodic updates
-        self.update_logs()
-        self.update_graph_periodically()
+        self.log_message("\nStarting endpoint discovery...")
+        
+        try:
+            # Try common API documentation endpoints
+            doc_endpoints = [
+                "/swagger/v1/swagger.json",
+                "/swagger.json",
+                "/openapi.json",
+                "/api-docs",
+                "/docs.json",
+                "/v2/api-docs"
+            ]
+            
+            discovered_endpoints = set()
+            
+            for doc_endpoint in doc_endpoints:
+                try:
+                    url = urljoin(base_url, doc_endpoint)
+                    response = requests.get(url, timeout=5)
+                    if response.status_code == 200:
+                        data = response.json()
+                        if 'paths' in data:
+                            # Parse OpenAPI/Swagger documentation
+                            for path in data['paths'].keys():
+                                if '{' not in path:  # Skip paths with parameters
+                                    discovered_endpoints.add(path)
+                            break
+                except Exception as e:
+                    continue
+            
+            # If no documentation found, try common REST endpoints
+            if not discovered_endpoints:
+                common_endpoints = [
+                    "/api", "/users", "/products", "/items", 
+                    "/data", "/status", "/health", "/info"
+                ]
+                for endpoint in common_endpoints:
+                    try:
+                        url = urljoin(base_url, endpoint)
+                        response = requests.get(url, timeout=3)
+                        if response.status_code < 400:
+                            discovered_endpoints.add(endpoint)
+                    except:
+                        continue
+            
+            # Update available endpoints
+            global available_endpoints
+            available_endpoints = sorted(list(discovered_endpoints))
+            
+            if available_endpoints:
+                self.update_endpoint_checkboxes()
+                self.log_message(f"Discovered {len(available_endpoints)} endpoints")
+            else:
+                self.log_message("No endpoints discovered automatically")
+                messagebox.showwarning("Warning", "Could not discover endpoints automatically")
+                
+        except Exception as e:
+            self.log_message(f"Endpoint discovery failed: {str(e)}")
+            messagebox.showerror("Error", f"Endpoint discovery failed: {str(e)}")
+    
+    def update_endpoint_checkboxes(self):
+        """Update the checkboxes with discovered endpoints"""
+        # Clear existing checkboxes
+        for widget in self.checkbox_scrollframe.winfo_children():
+            widget.destroy()
+        
+        self.endpoint_checkboxes = []
+        for i, endpoint in enumerate(available_endpoints):
+            checkbox = ctk.CTkCheckBox(self.checkbox_scrollframe, text=endpoint)
+            checkbox.grid(row=i, column=0, padx=5, pady=2, sticky="w")
+            self.endpoint_checkboxes.append(checkbox)
     
     def select_all_endpoints(self):
         for checkbox in self.endpoint_checkboxes:
@@ -213,12 +283,12 @@ class APITestApp:
         self.root.after(100, self.update_logs)
     
     def send_request(self, session, endpoint):
-        """Send a GET request and record metrics."""
+        """Send a GET request and record metrics"""
         base_url = self.server_url_entry.get().strip()
         if not base_url:
-            base_url = "http://192.168.1.52:5000"
+            base_url = "http://localhost:5000"
         
-        url = f"{base_url}{endpoint}"
+        url = urljoin(base_url, endpoint)
         try:
             start_time = time.time()
             response = session.get(url)
@@ -233,7 +303,7 @@ class APITestApp:
             return "Error", None
     
     def user_simulation(self, user_id):
-        """Simulate a user generating requests."""
+        """Simulate a user generating requests"""
         session = requests.Session()
         endpoints = self.get_selected_endpoints()
         if not endpoints:
@@ -283,6 +353,7 @@ class APITestApp:
         self.delay_max_entry.configure(state="disabled")
         self.log_interval_entry.configure(state="disabled")
         self.server_url_entry.configure(state="disabled")
+        self.discover_btn.configure(state="disabled")
         
         # Disable endpoint selection during test
         for checkbox in self.endpoint_checkboxes:
@@ -321,6 +392,7 @@ class APITestApp:
         self.delay_max_entry.configure(state="normal")
         self.log_interval_entry.configure(state="normal")
         self.server_url_entry.configure(state="normal")
+        self.discover_btn.configure(state="normal")
         
         # Re-enable endpoint selection
         for checkbox in self.endpoint_checkboxes:
@@ -372,7 +444,39 @@ class APITestApp:
     def on_closing(self):
         global test_running
         test_running = False
+        
+        # 1. Detener todas las actualizaciones programadas
+        self.root.after_cancel(self.update_job) if hasattr(self, 'update_job') else None
+        self.root.after_cancel(self.log_job) if hasattr(self, 'log_job') else None
+        
+        # 2. Cerrar correctamente la figura de matplotlib
+        plt.close('all')
+        if hasattr(self, 'canvas'):
+            self.canvas.get_tk_widget().destroy()
+        
+        # 3. Destruir la ventana principal
         self.root.destroy()
+        
+        # 4. Salir completamente (opcional pero recomendado)
+        import os
+        os._exit(0)
+
+    # En los métodos de actualización, guarda los IDs:
+    def update_graph_periodically(self):
+        self.update_job = self.root.after(1000, self.update_graph_periodically)
+        self.update_graph()
+
+    def update_logs(self):
+        try:
+            while True:
+                message = log_queue.get_nowait()
+                self.log_text.configure(state="normal")
+                self.log_text.insert("end", message + "\n")
+                self.log_text.see("end")
+                self.log_text.configure(state="disabled")
+        except queue.Empty:
+            pass
+        self.log_job = self.root.after(100, self.update_logs)
 
 if __name__ == "__main__":
     root = ctk.CTk()
