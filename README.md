@@ -1,93 +1,135 @@
- #  📚 API Stress Test Tool - Guía Completa  
+ # 📚 API Stress Test Tool - Guía Completa  
  **Herramienta profesional para pruebas de estrés en APIs REST**  
 
  <div align="center">
-   <img src="[https://www.svgrepo.com/svg/374016/python](https://www.python.org/psf-landing/)" alt="Python 3.8+">
-   <img src="https://img.shields.io/badge/Plataforma-Windows % 20 % 7C % 20Linux % 20 % 7C % 20Mac-lightgrey" alt="Multiplataforma">
+   <img src="https://img.shields.io/badge/Python-3.8%2B-blue?logo=python" alt="Python 3.8+">
+   <img src="https://img.shields.io/badge/Plataforma-Windows%20%7C%20Linux%20%7C%20Mac-lightgrey" alt="Multiplataforma">
    <img src="https://img.shields.io/badge/Licencia-MIT-green" alt="Licencia MIT">
  </div>
 
  ---
 
- ##  🚀 Instalación Paso a Paso
+ ## 🚀 Instalación Paso a Paso
 
  ### 1. Descargar el Programa
- -  ⬇️ **Opción A**: Clonar repositorio (recomendado para desarrolladores):
+ - ⬇️ **Opción A**: Clonar repositorio (recomendado para desarrolladores):
     ```bash
    git clone https://github.com/cr7guez/stress_test_tool.git
    cd stress_test_tool
     ```
- -  ⬇️ **Opción B**: [Descargar ZIP](https://github.com/cr7guez/stress_test_tool/archive/refs/heads/main.zip) y extraer.
+ - ⬇️ **Opción B**: [Descargar ZIP](https://github.com/cr7guez/stress_test_tool/archive/refs/heads/main.zip) y extraer en tu carpeta preferida.
 
  ### 2. Instalar Python
- -  🐍 **Windows**:
-   - Descargar de [python.org](https://www.python.org/downloads/)
-   - Marcar  ✅ *"Add Python to PATH"*
+ - 🐍 **Windows**:
+   - Descargar instalador oficial de [python.org](https://www.python.org/downloads/)
+   - **IMPORTANTE**: Marcar ✅ *"Add Python to PATH"* durante la instalación
 
- -  🍏 **Mac/Linux**:
+ - 🍏 **Mac/Linux**:
     ```bash
-   # Mac (Homebrew)
+   # Mac (con Homebrew)
    brew install python
-   
+ 
    # Linux (Debian/Ubuntu)
    sudo apt update && sudo apt install python3 python3-pip
     ```
 
- ### 3. Instalar Librerías
+ ### 3. Instalar Librerías Requeridas
+ Ejecutar en terminal (desde la carpeta del proyecto):
   ```bash
  pip install -r requirements.txt
   ```
+ *(Instala automáticamente: `customtkinter`, `matplotlib`, `requests` y dependencias)*
 
  ### 4. Ejecutar la Aplicación
- -  🖱️ **Método fácil**: Doble clic en:
+ - 🖱️ **Método fácil**: Hacer doble clic en:
     ```
    stress_test_tool_v1_cr7guez.bat  (Windows)
     ```
- -  💻 Desde terminal:
+   o desde terminal:
     ```bash
    python src/stress_test_tool.py
     ```
 
  ---
 
- ##  🖥️ Guía de Uso
+ ## 🖥️ Guía de Uso de la Interfaz
 
- ###  🔌 Configuración Inicial
+ ### 🔌 Configuración Inicial
  | Campo | Descripción | Valor Recomendado |
  |-------|-------------|-------------------|
  | **Server URL** | URL base de tu API | `http://localhost:5000` |
+ | **Discover Endpoints** | Botón para detectar endpoints automáticamente | *(Click después de ingresar URL)* |
 
- ###  ⚙️ Parámetros de Prueba
+ ### ⚙️ Parámetros de Prueba
  | Parámetro | Función | Valor Típico |
  |-----------|---------|--------------|
- | **Number of Users** | Usuarios virtuales | `50-200` |
+ | **Number of Users** | Usuarios virtuales simultáneos | `50-200` |
+ | **Delay Range (s)** | Intervalo entre peticiones | `0.1 - 5.0` |
+ | **Log Interval (s)** | Frecuencia de reportes | `10-30` |
 
- ###  📊 Selección de Endpoints
- 1. Usar botón **"Discover Endpoints"**
- 2. Seleccionar rutas manualmente o:
-    -  ✅ **Select All**
-    -  ❌ **Deselect All**
+ ### 📊 Selección de Endpoints
+ 1. Usa el botón **"Discover Endpoints"** para cargar rutas disponibles
+ 2. Selecciona endpoints individualmente o:
+    - ✅ **Select All**: Prueba todas las rutas
+    - ❌ **Deselect All**: Limpiar selección
+
+ ### 🎯 Controles Principales
+ | Botón | Función |
+ |-------|---------|
+ | ▶ **Start Test** | Inicia la prueba de estrés |
+ | ⏹ **Stop Test** | Detiene la ejecución |
+ | ESC | Salir de pantalla completa |
 
  ---
 
- ##  📈 Resultados
- ```log
+ ## 📈 Interpretación de Resultados
+
+ ### **Gráfico en Tiempo Real**
+ - Muestra los tiempos de respuesta por petición
+ - Línea roja: Umbral de alerta (configurable)
+
+ ### **Log de Consola**
+  ```log
  === Status Update ===
  Requests: 1250
- Avg Time: 0.45 s
- Status Codes: {200: 1180}
- ```
+ Avg Time: 0.45 s | Min: 0.12 s | Max: 2.31 s
+ Status Codes: {200: 1180, 500: 70}
+ Errors: 3
+  ```
 
  ---
 
- ##  🛠️ Solución de Problemas
+ ## 🛠️ Solución de Problemas
+
+ ### 🔍 Errores Comunes
  | Error | Solución |
  |-------|----------|
- | `Python not found` | Verificar PATH |
+ | `Python not found` | Verificar instalación y PATH |
+ | `Missing dependencies` | Ejecutar `pip install -r requirements.txt` |
+ | `Connection refused` | Verificar URL y que el API esté activa |
+
+ ### 📂 Estructura del Proyecto
+  ```
+ stress_test_tool/
+ ├── src/
+ │   ├── stress_test_tool.py      # Código principal
+ │   └── assets/                  # Iconos/imágenes
+ ├── stress_test_tool_v1_cr7guez.bat  # Lanzador Windows
+ └── requirements.txt             # Dependencias
+  ```
+
+ ---
+
+ ## 💡 Consejos Profesionales
+ 1. **Pruebas Iniciales**: Comienza con 10-50 usuarios para calibrar
+ 2. **Monitoreo**: Usa herramientas como Postman para verificar el API durante las pruebas
+ 3. **Seguridad**: No ejecutes pruebas en producción sin autorización
 
  ---
 
  <div align="center">
-   <h3> ⚡ ¿Listo para comenzar?</h3>
+   <h3>⚡ ¿Listo para estresar tu API como un profesional?</h3>
    <img src="https://media.giphy.com/media/L1R1tvI9svkIWwpVYr/giphy.gif" width="300">
+   
+   [![Descargar Ahora](https://img.shields.io/badge/Descargar-Proyecto-blue?style=for-the-badge)](https://github.com/cr7guez/stress_test_tool/archive/refs/heads/main.zip)
  </div>
