@@ -114,8 +114,7 @@
  ├── src/
  │   ├── stress_test_tool.py      # Código principal
  │   └── assets/                  # Iconos/imágenes
- ├── stress_test_tool_v1_cr7guez.bat  # Lanzador Windows
- └── requirements.txt             # Dependencias
+ └── stress_test_tool_v1_cr7guez.bat  # Lanzador Windows
   ```
 
  ---
@@ -128,8 +127,5 @@
  ---
 
  <div align="center">
-   <h3>⚡ ¿Listo para estresar tu API como un profesional?</h3>
-   <img src="https://media.giphy.com/media/L1R1tvI9svkIWwpVYr/giphy.gif" width="300">
-   
    [![Descargar Ahora](https://img.shields.io/badge/Descargar-Proyecto-blue?style=for-the-badge)](https://github.com/cr7guez/stress_test_tool/archive/refs/heads/main.zip)
  </div>
