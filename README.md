@@ -120,7 +120,3 @@
  3. **Seguridad**: No ejecutes pruebas en producción sin autorización
 
  ---
-
- <div align="center">
-   [![Descargar Ahora](https://img.shields.io/badge/Descargar-Proyecto-blue?style=for-the-badge)](https://github.com/cr7guez/stress_test_tool/archive/refs/heads/main.zip)
- </div>
