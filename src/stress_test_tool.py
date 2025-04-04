@@ -461,7 +461,6 @@ class APITestApp:
         import os
         os._exit(0)
 
-    # En los métodos de actualización, guarda los IDs:
     def update_graph_periodically(self):
         self.update_job = self.root.after(1000, self.update_graph_periodically)
         self.update_graph()
