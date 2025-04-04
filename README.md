@@ -10,10 +10,10 @@
  ### 1. Descargar el Programa
  - ⬇️ **Opción A**: Clonar repositorio (recomendado para desarrolladores):
     ```bash
-   git clone https://github.com/cr7guez/stress_test_tool.git
+   git clone https://github.com/cr7guez/api_stress_tool.git
    cd stress_test_tool
     ```
- - ⬇️ **Opción B**: [Descargar ZIP](https://github.com/cr7guez/stress_test_tool/archive/refs/heads/main.zip) y extraer en tu carpeta preferida.
+ - ⬇️ **Opción B**: [Descargar ZIP](https://github.com/cr7guez/api_stress_tool/archive/refs/heads/main.zip) y extraer en tu carpeta preferida.
 
  ### 2. Instalar Python
  - 🐍 **Windows**:
@@ -38,7 +38,7 @@
  ### 4. Ejecutar la Aplicación
  - 🖱️ **Método fácil**: Hacer doble clic en:
     ```
-   stress_test_tool_v1_cr7guez.bat  (Windows)
+   api_stress_tool_v1_cr7guez  (Windows)
     ```
    o desde terminal:
     ```bash
