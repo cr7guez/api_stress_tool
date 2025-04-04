@@ -32,9 +32,8 @@
  ### 3. Instalar Librerías Requeridas
  Ejecutar en terminal (desde la carpeta del proyecto):
   ```bash
- pip install -r requirements.txt
+ pip install customtkinter matplotlib requests numpy
   ```
- *(Instala automáticamente: `customtkinter`, `matplotlib`, `requests` y dependencias)*
 
  ### 4. Ejecutar la Aplicación
  - 🖱️ **Método fácil**: Hacer doble clic en:
