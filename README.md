@@ -1,7 +1,7 @@
  # 📚 API Stress Test Tool v1.00 - by César Rodríguez  
  **Herramienta para pruebas de estrés en APIs REST**  
 
- <img src="img/CQ2iHeY74h.png" alt="Imagen Funcionamiento" width="300"/>
+ <img src="img/CQ2iHeY74h.png" alt="Imagen Funcionamiento" width="500"/>
    
  ---
 
