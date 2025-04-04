@@ -11,7 +11,7 @@
  - ⬇️ **Opción A**: Clonar repositorio (recomendado para desarrolladores):
     ```bash
    git clone https://github.com/cr7guez/api_stress_tool.git
-   cd api_stress_tool
+   cd api_stress_tool-main
     ```
  - ⬇️ **Opción B**: [Descargar ZIP](https://github.com/cr7guez/api_stress_tool/archive/refs/heads/main.zip) y extraer en tu carpeta preferida.
 
