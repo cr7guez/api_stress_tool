@@ -45,41 +45,48 @@ class APITestApp:
     
     def create_widgets(self):
         """Create all GUI widgets"""
-        # Sidebar frame
+        # Configuración del grid principal (ventana raíz)
+        self.root.grid_columnconfigure(1, weight=2)  # Columna de logs (estrecha)
+        self.root.grid_columnconfigure(2, weight=2)  # Columna de gráficos (3x más ancha)
+        self.root.grid_rowconfigure(0, weight=1)     # Fila superior (endpoints + gráfico)
+        self.root.grid_rowconfigure(1, weight=1)     # Fila inferior (logs)
+
+        # --- Sidebar (izquierda) ---
         self.sidebar_frame = ctk.CTkFrame(self.root, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(5, weight=1)
-        
-        # Logo label
-        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="API Stress Test", 
-                                     font=ctk.CTkFont(size=20, weight="bold"))
+
+        # Logo
+        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="API Stress Test (GETs)", 
+                                    font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        
-        # Test parameters frame
+
+        # Frame de parámetros
         self.params_frame = ctk.CTkFrame(self.sidebar_frame)
         self.params_frame.grid(row=1, column=0, padx=20, pady=(10, 0), sticky="nsew")
-        
-        # Server URL
+
+        # Server URL (más ancho)
         self.server_url_label = ctk.CTkLabel(self.params_frame, text="Server URL:")
         self.server_url_label.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="w")
-        self.server_url_entry = ctk.CTkEntry(self.params_frame, placeholder_text="http://192.168.1.52:5000")
-        # Insertar valor predeterminado (visible y editable)
-        self.server_url_entry.insert(0, "http://192.168.1.52:5000") 
+        self.server_url_entry = ctk.CTkEntry(self.params_frame, 
+                                        placeholder_text="http://192.168.1.52:5000",
+                                        width=300)  # Ancho aumentado
+        self.server_url_entry.insert(0, "http://192.168.1.52:5000")
         self.server_url_entry.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
-        
-        # Discover endpoints button
+
+        # Botón "Discover Endpoints"
         self.discover_btn = ctk.CTkButton(self.params_frame, text="Discover Endpoints",
-                                         command=self.discover_endpoints)
+                                        command=self.discover_endpoints)
         self.discover_btn.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
-        
-        # Number of users
+
+        # Número de usuarios
         self.num_users_label = ctk.CTkLabel(self.params_frame, text="Number of Users:")
         self.num_users_label.grid(row=3, column=0, padx=5, pady=(5, 0), sticky="w")
         self.num_users_entry = ctk.CTkEntry(self.params_frame)
         self.num_users_entry.insert(0, "10")
         self.num_users_entry.grid(row=4, column=0, padx=5, pady=(0, 5), sticky="ew")
-        
-        # Delay range
+
+        # Rango de delay
         self.delay_label = ctk.CTkLabel(self.params_frame, text="Delay Range (s):")
         self.delay_label.grid(row=5, column=0, padx=5, pady=(5, 0), sticky="w")
         
@@ -94,56 +101,55 @@ class APITestApp:
         self.delay_max_entry = ctk.CTkEntry(self.delay_frame, width=60)
         self.delay_max_entry.insert(0, "1.0")
         self.delay_max_entry.grid(row=0, column=1, padx=(5, 0), sticky="e")
-        
-        # Log interval
+
+        # Intervalo de logs
         self.log_interval_label = ctk.CTkLabel(self.params_frame, text="Log Interval (s):")
         self.log_interval_label.grid(row=7, column=0, padx=5, pady=(5, 0), sticky="w")
         self.log_interval_entry = ctk.CTkEntry(self.params_frame)
         self.log_interval_entry.insert(0, "10")
         self.log_interval_entry.grid(row=8, column=0, padx=5, pady=(0, 10), sticky="ew")
-        
-        # Buttons
-        self.start_button = ctk.CTkButton(self.sidebar_frame, text="Start Test", command=self.start_test)
+
+        # Botones de inicio/parada
+        self.start_button = ctk.CTkButton(self.sidebar_frame, text="Start Test", 
+                                        command=self.start_test)
         self.start_button.grid(row=2, column=0, padx=20, pady=5)
         
         self.stop_button = ctk.CTkButton(self.sidebar_frame, text="Stop Test", 
-                                       command=self.stop_test, state="disabled")
+                                    command=self.stop_test, state="disabled")
         self.stop_button.grid(row=3, column=0, padx=20, pady=5)
-        
-        # Endpoint selection frame
+
+        # --- Frame de endpoints (centro-izquierda) ---
         self.endpoints_frame = ctk.CTkFrame(self.root)
-        self.endpoints_frame.grid(row=0, column=1, padx=(10, 0), pady=(10, 0), sticky="nsew")
+        self.endpoints_frame.grid(row=0, column=1, padx=(10, 5), pady=(10, 0), sticky="nsew")
         self.endpoints_frame.grid_columnconfigure(0, weight=1)
         self.endpoints_frame.grid_rowconfigure(1, weight=1)
         
         self.endpoints_label = ctk.CTkLabel(self.endpoints_frame, text="Select Endpoints to Test", 
-                                          font=ctk.CTkFont(weight="bold"))
+                                        font=ctk.CTkFont(weight="bold"))
         self.endpoints_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
         
-        # Scrollable frame for checkboxes
+        # Scrollable frame para checkboxes
         self.checkbox_scrollframe = ctk.CTkScrollableFrame(self.endpoints_frame)
         self.checkbox_scrollframe.grid(row=1, column=0, padx=5, pady=(0, 10), sticky="nsew")
-        
-        # Create empty checkboxes (will be populated when endpoints are discovered)
-        self.endpoint_checkboxes = []
-        
-        # Select all/none buttons
+        self.endpoint_checkboxes = []  # Lista para almacenar checkboxes
+
+        # Botones "Select All/Deselect All"
         self.select_buttons_frame = ctk.CTkFrame(self.endpoints_frame, fg_color="transparent")
         self.select_buttons_frame.grid(row=2, column=0, padx=5, pady=(0, 10), sticky="ew")
         
         self.select_all_button = ctk.CTkButton(self.select_buttons_frame, text="Select All", 
-                                             width=80, command=self.select_all_endpoints)
+                                            width=80, command=self.select_all_endpoints)
         self.select_all_button.grid(row=0, column=0, padx=(0, 5))
         
         self.deselect_all_button = ctk.CTkButton(self.select_buttons_frame, text="Deselect All", 
                                                 width=80, command=self.deselect_all_endpoints)
         self.deselect_all_button.grid(row=0, column=1, padx=(5, 0))
-        
-        # Log frame
+
+        # --- Frame de logs (abajo-centro) ---
         self.log_frame = ctk.CTkFrame(self.root)
-        self.log_frame.grid(row=1, column=1, padx=(10, 0), pady=(10, 0), sticky="nsew")
+        self.log_frame.grid(row=1, column=1, padx=(10, 5), pady=(10, 0), sticky="nsew")
         self.log_frame.grid_columnconfigure(0, weight=1)
-        self.log_frame.grid_rowconfigure(0, weight=1)
+        self.log_frame.grid_rowconfigure(1, weight=1)
         
         self.log_label = ctk.CTkLabel(self.log_frame, text="Test Log", 
                                     font=ctk.CTkFont(weight="bold"))
@@ -152,25 +158,25 @@ class APITestApp:
         self.log_text = ctk.CTkTextbox(self.log_frame, wrap="word")
         self.log_text.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
         self.log_text.configure(state="disabled")
-        
-        # Graph frame
+
+        # --- Frame de gráficos (derecha) ---
         self.graph_frame = ctk.CTkFrame(self.root)
-        self.graph_frame.grid(row=0, column=2, rowspan=2, padx=(10, 10), pady=(10, 0), sticky="nsew")
+        self.graph_frame.grid(row=0, column=2, rowspan=2, padx=(5, 10), pady=(10, 0), sticky="nsew")
         self.graph_frame.grid_columnconfigure(0, weight=1)
         self.graph_frame.grid_rowconfigure(1, weight=1)
         
         self.graph_label = ctk.CTkLabel(self.graph_frame, text="Response Times", 
-                                       font=ctk.CTkFont(weight="bold"))
+                                    font=ctk.CTkFont(weight="bold"))
         self.graph_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
         
-        # Create matplotlib figure
-        self.fig, self.ax = plt.subplots(figsize=(5, 4), dpi=100)
+        # Gráfico matplotlib (más grande)
+        self.fig, self.ax = plt.subplots(figsize=(6, 4), dpi=100)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.graph_frame)
-        self.canvas.get_tk_widget().grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
-        
-        # Status bar
+        self.canvas.get_tk_widget().grid(row=1, column=0, padx=5, pady=(0, 10), sticky="nsew")
+
+        # --- Barra de estado (abajo) ---
         self.status_bar = ctk.CTkLabel(self.root, text="Ready", anchor="w", 
-                                      font=ctk.CTkFont(size=10))
+                                    font=ctk.CTkFont(size=10))
         self.status_bar.grid(row=3, column=1, columnspan=2, padx=10, pady=(0, 10), sticky="ew")
     
     def discover_endpoints(self):
