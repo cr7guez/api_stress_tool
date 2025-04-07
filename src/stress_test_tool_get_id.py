@@ -10,6 +10,8 @@ import statistics
 import queue
 import json
 from urllib.parse import urljoin
+import random
+import math
 
 # Configuration
 ctk.set_appearance_mode("System")
@@ -227,8 +229,33 @@ class APITestApp:
             
             # Update available endpoints
             global available_endpoints
-            available_endpoints = sorted(list(discovered_endpoints))
-            
+            available_endpoints = [
+                "Area/GetArea/{id}",
+                "AvcitCommand/{id}",
+                "AvcitDevice/{id}",
+                "AvcitSource/{id}",
+                "/AvDevice/GetAvDevice/{id}",
+                "AvDeviceType/GetAvDeviceType/{id}",
+                "Cam/GetCamById/{id}",
+                "Company/GetCompany/{id}",
+                "ConsoleDevice/GetConsoleDevice/{id}",
+                "ControlDevice/GetControlDevice/{id}",
+                "Department/GetDepartment/{id}",
+                "InfluenceZone/GetInfluenceZone/{id}",
+                "Position/GetPosition/{id}",
+                "Role/GetRole/{id}",
+                "Room/GetRoom/{id}",
+                "User/Get/{id}",
+                "UserRole/GetUserRoleByUserId/{id}",
+                "VuwallDestination/GetDestinationById/{id}",
+                "VuwallJoin/DeleteJoinsById/{id}",
+                "VuwallScenario/GetScenarioById/{id}",
+                "VuwallScenario/DeleteScenario/{id}",
+                "VuwallSource/GetSourceById/{id}",
+                "Workplace/GetWorkplace/{id}",
+                "Workplace/GetWorkplaceByDestinationId/{id}"
+            ]
+
             if available_endpoints:
                 self.update_endpoint_checkboxes()
                 self.log_message(f"Discovered {len(available_endpoints)} endpoints")
@@ -301,20 +328,31 @@ class APITestApp:
             errors.append(str(e))
             self.log_message(f"Error requesting {endpoint}: {str(e)}")
             return "Error", None
-    
+
     def user_simulation(self, user_id):
         """Simulate a user generating requests"""
         session = requests.Session()
-        endpoints = self.get_selected_endpoints()
+        endpoints = self.get_selected_endpoints()  # Obtén los endpoints seleccionados
         if not endpoints:
             self.log_message("No endpoints selected for testing!")
             return
-            
+        
         while test_running:
+            # Selecciona un endpoint aleatorio
             endpoint = random.choice(endpoints)
-            self.send_request(session, endpoint)
+            
+            # Genera un id aleatorio entre 1 y 10
+            endpoint_id = random.randint(1, 10)
+            
+            # Reemplaza el {id} en el endpoint por el id aleatorio
+            endpoint_with_id = endpoint.format(id=endpoint_id)
+            
+            # Llama al método que enviará la solicitud HTTP
+            self.send_request(session, endpoint_with_id)
+            
+            # Espera un tiempo aleatorio antes de la siguiente solicitud
             time.sleep(random.uniform(float(self.delay_min_entry.get()), float(self.delay_max_entry.get())))
-    
+ 
     def start_test(self):
         global test_running, response_times, status_codes, errors
         
