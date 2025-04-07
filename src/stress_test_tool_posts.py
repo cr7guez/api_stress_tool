@@ -59,7 +59,7 @@ class APITestApp:
         self.sidebar_frame.grid_rowconfigure(5, weight=1)
 
         # Logo
-        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="API Stress Test (GETs by ID)", 
+        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="API Stress Test (POSTs)", 
                                     font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
 
@@ -182,94 +182,65 @@ class APITestApp:
         self.status_bar.grid(row=3, column=1, columnspan=2, padx=10, pady=(0, 10), sticky="ew")
     
     def discover_endpoints(self):
-        """Discover API endpoints automatically"""
+        """Discover API endpoints with specific POST calls"""
         base_url = self.server_url_entry.get().strip()
         if not base_url:
             messagebox.showwarning("Warning", "Please enter a valid Server URL")
             return
-        
-        self.log_message("\nStarting endpoint discovery...")
-        
+
+        self.log_message("\nStarting endpoint discovery with POST calls...")
+
         try:
-            # Try common API documentation endpoints
-            doc_endpoints = [
-                "/swagger/v1/swagger.json",
-                "/swagger.json",
-                "/openapi.json",
-                "/api-docs",
-                "/docs.json",
-                "/v2/api-docs"
-            ]
-            
-            discovered_endpoints = set()
-            
-            for doc_endpoint in doc_endpoints:
+            # Definimos los endpoints y sus cuerpos de prueba
+            endpoints_to_try = {
+                "/AvcitSource": {
+                    "method": "POST",
+                    "data": {
+                        "Id": 0,
+                        "Name": "string",
+                        "Ip": "string",
+                        "Description": "string",
+                        "Active": "true"
+                    }
+                },
+                # Puedes agregar más endpoints aquí
+            }
+
+            discovered_endpoints = []
+
+            for endpoint, config in endpoints_to_try.items():
                 try:
-                    url = urljoin(base_url, doc_endpoint)
-                    response = requests.get(url, timeout=5)
-                    if response.status_code == 200:
-                        data = response.json()
-                        if 'paths' in data:
-                            # Parse OpenAPI/Swagger documentation
-                            for path in data['paths'].keys():
-                                if '{' not in path:  # Skip paths with parameters
-                                    discovered_endpoints.add(path)
-                            break
+                    url = urljoin(base_url, endpoint)
+                    if config["method"] == "POST":
+                        # Usamos `data=` en lugar de `json=` para enviar como multipart/form-data
+                        response = requests.post(url, data=config["data"], timeout=5)
+                    else:
+                        response = requests.get(url, timeout=5)
+
+                    if response.status_code < 400:
+                        discovered_endpoints.append(endpoint)
+                        self.log_message(f"Successfully accessed {endpoint} with {config['method']}")
+                    else:
+                        self.log_message(f"{endpoint} responded with status code {response.status_code}")
                 except Exception as e:
+                    self.log_message(f"Error trying {endpoint}: {str(e)}")
                     continue
-            
-            # If no documentation found, try common REST endpoints
-            if not discovered_endpoints:
-                common_endpoints = [
-                    "/api", "/users", "/products", "/items", 
-                    "/data", "/status", "/health", "/info"
-                ]
-                for endpoint in common_endpoints:
-                    try:
-                        url = urljoin(base_url, endpoint)
-                        response = requests.get(url, timeout=3)
-                        if response.status_code < 400:
-                            discovered_endpoints.add(endpoint)
-                    except:
-                        continue
-            
+
             # Update available endpoints
             global available_endpoints
-            available_endpoints = [
-                "Area/GetArea/{id}",
-                "AvcitCommand/{id}",
-                "AvcitDevice/{id}",
-                "AvcitSource/{id}",
-                "/AvDevice/GetAvDevice/{id}",
-                "AvDeviceType/GetAvDeviceType/{id}",
-                "Cam/GetCamById/{id}",
-                "Company/GetCompany/{id}",
-                "ConsoleDevice/GetConsoleDevice/{id}",
-                "ControlDevice/GetControlDevice/{id}",
-                "Department/GetDepartment/{id}",
-                "InfluenceZone/GetInfluenceZone/{id}",
-                "Position/GetPosition/{id}",
-                "Role/GetRole/{id}",
-                "Room/GetRoom/{id}",
-                "User/Get/{id}",
-                "UserRole/GetUserRoleByUserId/{id}",
-                "VuwallDestination/GetDestinationById/{id}",
-                "VuwallScenario/GetScenarioById/{id}",
-                "VuwallSource/GetSourceById/{id}",
-                "Workplace/GetWorkplace/{id}",
-                "Workplace/GetWorkplaceByDestinationId/{id}"
-            ]
+            available_endpoints = discovered_endpoints
 
             if available_endpoints:
                 self.update_endpoint_checkboxes()
-                self.log_message(f"Discovered {len(available_endpoints)} endpoints")
+                self.log_message(f"Discovered {len(available_endpoints)} working endpoints")
             else:
-                self.log_message("No endpoints discovered automatically")
-                messagebox.showwarning("Warning", "Could not discover endpoints automatically")
-                
+                self.log_message("No endpoints responded successfully")
+                messagebox.showwarning("Warning", "No endpoints responded successfully")
+
         except Exception as e:
             self.log_message(f"Endpoint discovery failed: {str(e)}")
             messagebox.showerror("Error", f"Endpoint discovery failed: {str(e)}")
+
     
     def update_endpoint_checkboxes(self):
         """Update the checkboxes with discovered endpoints"""
@@ -336,25 +307,14 @@ class APITestApp:
     def user_simulation(self, user_id):
         """Simulate a user generating requests"""
         session = requests.Session()
-        endpoints = self.get_selected_endpoints()  # Obtén los endpoints seleccionados
+        endpoints = self.get_selected_endpoints()
         if not endpoints:
             self.log_message("No endpoints selected for testing!")
             return
-        
+            
         while test_running:
-            # Selecciona un endpoint aleatorio
             endpoint = random.choice(endpoints)
-            
-            # Genera un id aleatorio entre 1 y 10
-            endpoint_id = random.randint(1, 10)
-            
-            # Reemplaza el {id} en el endpoint por el id aleatorio
-            endpoint_with_id = endpoint.format(id=endpoint_id)
-            
-            # Llama al método que enviará la solicitud HTTP
-            self.send_request(session, endpoint_with_id)
-            
-            # Espera un tiempo aleatorio antes de la siguiente solicitud
+            self.send_request(session, endpoint)
             time.sleep(random.uniform(float(self.delay_min_entry.get()), float(self.delay_max_entry.get())))
  
     def start_test(self):
