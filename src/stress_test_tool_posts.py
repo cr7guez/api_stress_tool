@@ -188,42 +188,65 @@ class APITestApp:
             messagebox.showwarning("Warning", "Please enter a valid Server URL")
             return
 
-        self.log_message("\nStarting endpoint discovery with POST calls...")
+        self.log_message("\nStarting POST endpoint discovery...")
 
         try:
-            # Definimos los endpoints y sus cuerpos de prueba
-            endpoints_to_try = {
-                "/AvcitSource": {
-                    "method": "POST",
+            # Definimos los endpoints POST y sus cuerpos de prueba
+            post_endpoints_to_try = {
+                "/AvDevice/CreateAvDevice": {
                     "data": {
-                        "Id": 0,
-                        "Name": "string",
-                        "Ip": "string",
-                        "Description": "string",
+                        "Id": "0",
+                        "Nombre": "Hola",
+                        "Marca": "Hola",
+                        "Modelo": "Hola",
+                        "Ip": "Hola",
+                        "Mac": "Hola",
+                        "Descripcion": "Hola",
+                        "TipoId": "1"
+                    }
+                },
+                "/AvcitCommand": {
+                    "data": {
+                        "Id": "0",
+                        "Name": "Hola",
+                        "Description": "Hola",
                         "Active": "true"
                     }
                 },
-                # Puedes agregar más endpoints aquí
+                "/AvcitDevice": {
+                    "data": {
+                        "Id": "0",
+                        "Name": "Hola",
+                        "Ip": "Hola",
+                        "Description": "Hola",
+                        "Active": "true"
+                    }
+                },
+                "/AvcitSource": {
+                    "data": {
+                        "Id": "0",
+                        "Name": "Hola",
+                        "Ip": "Hola",
+                        "Description": "Hola",
+                        "Active": "true"
+                    }
+                },
             }
 
             discovered_endpoints = []
 
-            for endpoint, config in endpoints_to_try.items():
+            for endpoint, config in post_endpoints_to_try.items():
                 try:
                     url = urljoin(base_url, endpoint)
-                    if config["method"] == "POST":
-                        # Usamos `data=` en lugar de `json=` para enviar como multipart/form-data
-                        response = requests.post(url, data=config["data"], timeout=5)
-                    else:
-                        response = requests.get(url, timeout=5)
+                    response = requests.post(url, data=config["data"], timeout=5)
 
                     if response.status_code < 400:
                         discovered_endpoints.append(endpoint)
-                        self.log_message(f"Successfully accessed {endpoint} with {config['method']}")
+                        self.log_message(f"Successfully accessed POST {endpoint}")
                     else:
-                        self.log_message(f"{endpoint} responded with status code {response.status_code}")
+                        self.log_message(f"POST {endpoint} responded with status {response.status_code}")
                 except Exception as e:
-                    self.log_message(f"Error trying {endpoint}: {str(e)}")
+                    self.log_message(f"Error trying POST {endpoint}: {str(e)}")
                     continue
 
             # Update available endpoints
@@ -232,15 +255,14 @@ class APITestApp:
 
             if available_endpoints:
                 self.update_endpoint_checkboxes()
-                self.log_message(f"Discovered {len(available_endpoints)} working endpoints")
+                self.log_message(f"Discovered {len(available_endpoints)} working POST endpoints")
             else:
-                self.log_message("No endpoints responded successfully")
-                messagebox.showwarning("Warning", "No endpoints responded successfully")
+                self.log_message("No POST endpoints responded successfully")
+                messagebox.showwarning("Warning", "No POST endpoints responded successfully")
 
         except Exception as e:
-            self.log_message(f"Endpoint discovery failed: {str(e)}")
-            messagebox.showerror("Error", f"Endpoint discovery failed: {str(e)}")
-
+            self.log_message(f"POST endpoint discovery failed: {str(e)}")
+            messagebox.showerror("Error", f"POST endpoint discovery failed: {str(e)}")
     
     def update_endpoint_checkboxes(self):
         """Update the checkboxes with discovered endpoints"""
@@ -285,23 +307,69 @@ class APITestApp:
         self.root.after(100, self.update_logs)
     
     def send_request(self, session, endpoint):
-        """Send a GET request and record metrics"""
+        """Send a POST request and record metrics"""
         base_url = self.server_url_entry.get().strip()
         if not base_url:
-            base_url = "http://localhost:5000"
+            base_url = "http://192.168.1.52:5000"
         
         url = urljoin(base_url, endpoint)
+        
+        # Definir los datos para cada endpoint POST
+        post_data = {
+            "/AvDevice/CreateAvDevice": {
+                "Id": "0",
+                "Nombre": "Hola",
+                "Marca": "Hola",
+                "Modelo": "Hola",
+                "Ip": "Hola",
+                "Mac": "Hola",
+                "Descripcion": "Hola",
+                "TipoId": "1"
+            },
+            "/AvcitCommand": {
+                "Id": "0",
+                "Name": "Hola",
+                "Description": "Hola",
+                "Active": "true"
+            },
+            "/AvcitDevice": {
+                "Id": "0",
+                "Name": "Hola",
+                "Ip": "Hola",
+                "Description": "Hola",
+                "Active": "true"
+            },
+            "/AvcitSource": {
+                "Id": "0",
+                "Name": "Hola",
+                "Ip": "Hola",
+                "Description": "Hola",
+                "Active": "true"
+            },
+            "/AvDevice/CreateAvDevice": {
+                "Id": "0",
+                "Nombre": "Hola",
+                "Marca": "Hola",
+                "Modelo": "Hola",
+                "Ip": "Hola",
+                "Mac": "Hola",
+                "Descripcion": "Hola",
+                "TipoId": "1"
+            },
+        }
+        
         try:
+            data = post_data.get(endpoint, {})
             start_time = time.time()
-            response = session.get(url)
+            response = session.post(url, data=data)
             elapsed_time = time.time() - start_time
             response_times.append(elapsed_time)
             status_codes[response.status_code] = status_codes.get(response.status_code, 0) + 1
-            self.log_message(f"Request to {endpoint} -> {response.status_code} | Time: {elapsed_time:.4f} s")
+            self.log_message(f"POST to {endpoint} -> {response.status_code} | Time: {elapsed_time:.4f} s")
             return response.status_code, elapsed_time
         except requests.RequestException as e:
             errors.append(str(e))
-            self.log_message(f"Error requesting {endpoint}: {str(e)}")
+            self.log_message(f"Error in POST to {endpoint}: {str(e)}")
             return "Error", None
 
     def user_simulation(self, user_id):
